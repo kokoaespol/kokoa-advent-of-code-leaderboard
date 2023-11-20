@@ -10,7 +10,7 @@ COPY aoc-leaderboard.cabal aoc-leaderboard.cabal
 RUN cabal build --only-dependencies -j4
 
 # Build the exe
-COPY . .
+COPY . /app/
 RUN cabal install -j4
 
 ENTRYPOINT ["aoc-leaderboard"]

@@ -9,7 +9,7 @@ author:             Alexander Goussas
 maintainer:         goussasalexander@gmail.com
 -- copyright:
 -- category:
-extra-source-files: README.md
+extra-source-files: README.md, styles.css
 
 executable aoc-leaderboard
     main-is:          Main.hs

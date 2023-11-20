@@ -19,7 +19,8 @@ import           Control.Monad.STM             (atomically)
 import           Data.Aeson                    (FromJSON, ToJSON)
 import           Data.ByteString               (ByteString)
 import qualified Data.ByteString.Char8         as B8
-import           Data.FileEmbed                (embedFile)
+import           Data.FileEmbed                (embedFile,
+                                                makeRelativeToProject)
 import           Data.Map                      (Map)
 import qualified Data.Map                      as M
 import           Data.Text                     (Text)
@@ -81,7 +82,7 @@ syncLeaderBoard cookie leaderBoard = void $ forkIO $ forever $ do
     Nothing -> threadDelay (15 * 60 * 1000 * 1000)
 
 leaderBoardCss :: ByteString
-leaderBoardCss = $(embedFile "styles.css")
+leaderBoardCss = $(makeRelativeToProject "styles.css" >>= embedFile)
 
 viewHead :: Html
 viewHead =
