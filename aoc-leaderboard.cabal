@@ -1,0 +1,27 @@
+cabal-version:      2.4
+name:               aoc-leaderboard
+version:            0.1.0.0
+-- synopsis:
+-- description:
+-- bug-reports:
+-- license:
+author:             Alexander Goussas
+maintainer:         goussasalexander@gmail.com
+-- copyright:
+-- category:
+extra-source-files: README.md
+
+executable aoc-leaderboard
+    main-is:          Main.hs
+    -- other-modules:
+    build-depends:    base ^>=4.16.4.0
+                    , scotty
+                    , req
+                    , wai
+                    , warp
+                    , blaze-html
+                    , text
+                    , aeson
+    hs-source-dirs:   app
+    default-language: Haskell2010
+    default-extensions: OverloadedStrings
