@@ -13,13 +13,11 @@ extra-source-files: README.md
 
 executable aoc-leaderboard
     main-is:          Main.hs
-    ghc-options:      -threaded
+    ghc-options:      -threaded -Wall -Wno-name-shadowing
     -- other-modules:
     build-depends:    base ^>=4.16.4.0
                     , scotty
                     , req
-                    , wai
-                    , warp
                     , blaze-html
                     , text
                     , aeson

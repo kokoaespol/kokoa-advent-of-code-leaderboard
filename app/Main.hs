@@ -1,23 +1,24 @@
-{-# LANGUAGE DeriveAnyClass  #-}
-{-# LANGUAGE DeriveGeneric   #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
 module Main where
 
-import           Control.Monad                 (forM_, forever, guard, void)
+import           Control.Exception
+import           Control.Monad                 (forM_, forever, void)
 import           Control.Monad.IO.Class        (liftIO)
 import           Data.Function                 (on)
 import           Data.List                     (sortBy)
-import           Data.Maybe                    (isJust)
 import           GHC.Generics                  (Generic)
 import           System.Environment            (lookupEnv)
 
 import           Configuration.Dotenv          (defaultConfig, loadFile)
 import           Control.Concurrent            (forkIO, threadDelay)
 import           Control.Concurrent.STM.TVar
-
 import           Control.Monad.STM             (atomically)
 import           Data.Aeson                    (FromJSON, ToJSON)
 import           Data.ByteString               (ByteString)
+import qualified Data.ByteString.Char8         as B8
 import           Data.FileEmbed                (embedFile)
 import           Data.Map                      (Map)
 import qualified Data.Map                      as M
@@ -47,80 +48,97 @@ data LeaderBoard = LeaderBoard
   }
   deriving (Show, Generic, FromJSON)
 
--- TODO: Add exception handling to this.
+data State
+  = WithLeaderBoard LeaderBoard
+  -- ^ The application state when the leaderboard was successfully retrieved.
+  | NoLeaderBoard
+  -- ^ The application state when the leaderboard could not be retrieved.
+  deriving (Show)
+
+-- | Prepare the initial application state.
+initState :: ByteString -> IO (TVar State)
+initState cookie = getLeaderBoard cookie >>= newTVarIO . maybe NoLeaderBoard WithLeaderBoard
+
 -- | Get the leaderboard from the advent of code API.
-getLeaderBoard :: ByteString -> IO LeaderBoard
-getLeaderBoard cookie = runReq defaultHttpConfig $ do
+getLeaderBoard :: ByteString -> IO (Maybe LeaderBoard)
+getLeaderBoard cookie = (Just <$> runReq defaultHttpConfig (do
   r <- req
         GET
         (https "adventofcode.com" /: "2023" /: "leaderboard" /: "private" /: "view" /: "1468863.json")
         NoReqBody
         jsonResponse
         (header "Cookie" cookie)
-  return $ responseBody r
+  return $ responseBody r)) `catch` (\(_ :: SomeException) -> pure Nothing)
 
 -- | Start a loop to sync the leaderboard every 15 minutes.
-syncLeaderBoard :: ByteString -> TVar LeaderBoard -> IO ()
+syncLeaderBoard :: ByteString -> TVar State -> IO ()
 syncLeaderBoard cookie leaderBoard = void $ forkIO $ forever $ do
   newLeaderBoard <- getLeaderBoard cookie
-  atomically $ writeTVar leaderBoard newLeaderBoard
-  threadDelay 900
-
--- | Fetch the initial leaderboard.
-newLeaderBoard :: ByteString -> IO (TVar LeaderBoard)
-newLeaderBoard cookie =  getLeaderBoard cookie >>= newTVarIO
+  case newLeaderBoard of
+    Just newLeaderBoard' -> do
+      atomically $ writeTVar leaderBoard (WithLeaderBoard newLeaderBoard')
+      threadDelay (15 * 60 * 1000 * 1000)
+    Nothing -> threadDelay (15 * 60 * 1000 * 1000)
 
 leaderBoardCss :: ByteString
 leaderBoardCss = $(embedFile "styles.css")
 
-leaderBoardView :: LeaderBoard -> Html
-leaderBoardView leaderBoard = do
+viewHead :: Html
+viewHead =
   H.head $ do
     H.link ! A.rel "stylesheet" ! A.href "/styles.css"
     H.link ! A.rel "stylesheet" ! A.href "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css"
     H.link ! A.rel "stylesheet" ! A.href "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/regular.min.css"
     H.link ! A.rel "stylesheet" ! A.href "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css"
     H.style . H.toHtml . TE.decodeUtf8 $ leaderBoardCss
-  H.body $ do
-    H.h1 ! A.class_ "shiny" $ "Advent of Code 2023!"
-    H.h2 "Leaderboard"
-    H.p $ do
-      H.span "Join our leaderboard with the code: "
-      H.span ! A.class_ "shiny" $ "1468863-c36b5be4"
-    H.ul $ forM_ (zip [1..] . sortBy (compare `on` local_score) . M.elems . members $ leaderBoard) $ \(n, member) -> do
-      H.li $ do
-        H.div ! A.class_ "user-item user-name" $ do
-          H.span ! A.class_ "shiny" $ H.toHtml (n :: Integer)
-          H.span $ H.toHtml $ name member
-        H.div ! A.class_ "user-item user-score" $ do
-          H.span "Local Score:"
-          H.span $ H.toHtml $ local_score member
-        H.div ! A.class_ "user-item user-stars" $ do
-          H.i ! A.class_ "fa-solid fa-star star" $ mempty
-          H.span $ H.toHtml $ stars member
 
-server :: TVar LeaderBoard -> IO ()
-server leaderBoardRef = scotty 3000 $ do
+viewLeaderBoard :: LeaderBoard -> Html
+viewLeaderBoard leaderBoard = do
+  H.ul $ forM_ (zip [1..] . sortBy (compare `on` local_score) . M.elems . members $ leaderBoard) $ \(n, member) -> do
+    H.li $ do
+      H.div ! A.class_ "user-item user-name" $ do
+        H.span ! A.class_ "shiny" $ H.toHtml (n :: Integer)
+        H.span $ H.toHtml $ name member
+      H.div ! A.class_ "user-item user-score" $ do
+        H.span "Local Score:"
+        H.span $ H.toHtml $ local_score member
+      H.div ! A.class_ "user-item user-stars" $ do
+        H.i ! A.class_ "fa-solid fa-star star" $ mempty
+        H.span $ H.toHtml $ stars member
+
+viewBody :: State -> Html
+viewBody state = do
+  H.h1 ! A.class_ "shiny" $ "Advent of Code 2023!"
+  H.h2 "Leaderboard"
+  H.p $ do
+    H.span "Join our leaderboard with the code: "
+    H.span ! A.class_ "shiny" $ "1468863-c36b5be4"
+  case state of
+    NoLeaderBoard -> H.p "Oops! We can't retrieve the leaderboard right now. Try again in 15 minutes!"
+    WithLeaderBoard leaderBoard -> viewLeaderBoard leaderBoard
+
+viewFooter :: Html
+viewFooter = H.footer $ H.p "Copyright Club Kokoa 2023"
+
+view :: State -> Html
+view state = viewHead >> H.body (viewBody state >> viewFooter)
+
+server :: Int -> TVar State -> IO ()
+server port stateRef = scotty port $
   get "/" $ do
-    leaderBoard <- liftIO $ readTVarIO leaderBoardRef
-    html $ renderHtml $ leaderBoardView leaderBoard
-
-dummyLeaderBoard :: LeaderBoard
-dummyLeaderBoard = LeaderBoard
-  { owner_id = 1468863
-  , members = M.fromList
-    [ ("james", Member 1 100 "james" 100 100)
-    , ("james2", Member 2 200 "james2" 200 200)
-    ]
-  , event = "2023"
-  }
+    state <- liftIO $ readTVarIO stateRef
+    html $ renderHtml $ view state
 
 main :: IO ()
 main = do
   loadFile defaultConfig
   cookie <- lookupEnv "AOC_COOKIE"
-  guard $ isJust cookie
-  -- leaderBoardRef <- newLeaderBoard
-  -- syncLeaderBoard leaderBoardRef
-  leaderBoardRef <- newTVarIO dummyLeaderBoard
-  server leaderBoardRef
+  port <- fmap (fmap read) (lookupEnv "PORT")
+  case (cookie, port) of
+    (Nothing, _) -> error "AOC_COOKIE is not set!"
+    (_, Nothing) -> error "PORT is not set!"
+    (Just cookie', Just port) -> do
+      let cookie'' = B8.pack cookie'
+      stateRef <- initState cookie''
+      syncLeaderBoard cookie'' stateRef
+      server port stateRef
