@@ -26,6 +26,8 @@ executable aoc-leaderboard
                     , stm
                     , file-embed
                     , dotenv
+                    , wai-middleware-static
+                    , wai-extra
     hs-source-dirs:   app
     default-language: Haskell2010
     default-extensions: OverloadedStrings
