@@ -87,15 +87,17 @@ syncLeaderBoard cookie leaderBoard = void $ forkIO $ forever $ do
 leaderBoardCss :: ByteString
 leaderBoardCss = $(makeRelativeToProject "styles.css" >>= embedFile)
 
-viewHead :: Html
-viewHead =
+viewHead :: String -> Html
+viewHead title =
   H.head $ do
     H.link ! A.rel "stylesheet" ! A.href "/styles.css"
     H.link ! A.rel "stylesheet" ! A.href "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css"
     H.link ! A.rel "stylesheet" ! A.href "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/regular.min.css"
     H.link ! A.rel "stylesheet" ! A.href "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css"
+    H.link ! A.rel "stylesheet" ! A.href "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css"
     H.meta ! A.name "viewport" ! A.content "width=device-width, initial-scale=1"
     H.style . H.toHtml . TE.decodeUtf8 $ leaderBoardCss
+    H.title $ H.toHtml title
 
 viewLeaderBoard :: LeaderBoard -> Html
 viewLeaderBoard leaderBoard = do
@@ -115,21 +117,44 @@ viewBody :: State -> Html
 viewBody state = do
   H.div ! A.id "leaderboard-header" $ do
     H.div $ do
-      H.h1 ! A.class_ "shiny" $ "Advent of Code 2023!"
+      H.h1 ! A.class_ "shiny" $ "Advent of Kokoa 2023!"
       H.h2 "Leaderboard"
-    H.img ! A.src "images/gecko.png" ! A.alt "gecko" ! A.width "100"
-  H.p $ do
-    H.span "Join our leaderboard with the code: "
-    H.span ! A.class_ "shiny" $ "1468863-c36b5be4"
+      H.p $ do
+        H.span "Join our leaderboard with the code: "
+        H.span ! A.class_ "shiny" $ "1468863-c36b5be4 "
+        H.a ! A.href "/how-to-join" $ "How to join?"
+    H.img ! A.src "images/gecko.png" ! A.alt "gecko" ! A.width "150"
   case state of
     NoLeaderBoard -> H.p "Oops! We can't retrieve the leaderboard right now. Try again in 15 minutes!"
     WithLeaderBoard leaderBoard -> viewLeaderBoard leaderBoard
 
 viewFooter :: Html
-viewFooter = H.footer $ H.p "Copyright Club Kokoa 2023"
+viewFooter = H.footer $ do
+  H.p $ do
+    "Fork me on "
+    H.a ! A.href "https://github.com/kokoaespol/aoc-leaderboard" $
+      H.i ! A.class_ "fab fa-github" $ mempty
+  H.p "Copyright Club Kokoa 2023"
 
 view :: State -> Html
-view state = viewHead >> H.body (viewBody state >> viewFooter)
+view state = viewHead "LeaderBoard | Advent of Kokoa" >> H.body (viewBody state >> viewFooter)
+
+viewHowToJoin :: Html
+viewHowToJoin = viewHead "How to Join | Advent of Kokoa" >> H.body (do
+  H.h1 "How to join?"
+  H.p $ do
+    "Visit the Advent of Code website and create an account if you don't have one: "
+    H.a ! A.href "https://adventofcode.com/2023" $ "https://adventofcode.com/2023. "
+    "Now click on \"Leaderboard\" in the top menu:"
+  H.img ! A.src "images/01.png" ! A.alt "step 01"
+  H.p "Next, click on \"Private Leaderboard\":"
+  H.img ! A.src "images/02.png" ! A.alt "step 02"
+  H.p $ do
+    "Finally, enter the code in the input field: "
+    H.span ! A.class_ "shiny" $ "1468863-c36b5be4"
+  H.img ! A.src "images/03.png" ! A.alt "step 03"
+  H.p "That's it! Happy hacking!"
+  viewFooter)
 
 server :: Int -> TVar State -> IO ()
 server port stateRef = scotty port $ do
@@ -138,6 +163,7 @@ server port stateRef = scotty port $ do
   get "/" $ do
     state <- liftIO $ readTVarIO stateRef
     html $ renderHtml $ view state
+  get "/how-to-join" . html . renderHtml $ viewHowToJoin
 
 main :: IO ()
 main = do
