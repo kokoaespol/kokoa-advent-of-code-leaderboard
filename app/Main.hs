@@ -12,7 +12,8 @@ import           Data.List                            (sortBy)
 import           GHC.Generics                         (Generic)
 import           System.Environment                   (lookupEnv)
 
-import           Configuration.Dotenv                 (defaultConfig, loadFile)
+import           Configuration.Dotenv                 (defaultConfig, loadFile,
+                                                       onMissingFile)
 import           Control.Concurrent                   (forkIO, threadDelay)
 import           Control.Concurrent.STM.TVar
 import           Control.Monad.STM                    (atomically)
@@ -140,7 +141,7 @@ server port stateRef = scotty port $ do
 
 main :: IO ()
 main = do
-  loadFile defaultConfig
+  loadFile defaultConfig `onMissingFile` return ()
   cookie <- lookupEnv "AOC_COOKIE"
   port <- fmap (fmap read) (lookupEnv "PORT")
   case (cookie, port) of
