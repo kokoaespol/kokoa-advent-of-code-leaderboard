@@ -29,6 +29,10 @@ a {
   justify-content: space-between;
 }
 
+#leaderboard-header-info {
+  display: flex;
+}
+
 .shiny {
   text-shadow: 0 0 2px var(--accent-color), 0 0 5px var(--accent-color);
 }

@@ -116,13 +116,26 @@ viewLeaderBoard leaderBoard = do
 viewBody :: State -> Html
 viewBody state = do
   H.div ! A.id "leaderboard-header" $ do
-    H.div $ do
-      H.h1 ! A.class_ "shiny" $ "Advent of Kokoa 2023!"
-      H.h2 "Leaderboard"
-      H.p $ do
-        H.span "Join our leaderboard with the code: "
-        H.span ! A.class_ "shiny" $ "1468863-c36b5be4 "
-        H.a ! A.href "/how-to-join" $ "How to join?"
+    H.div ! A.id "leaderboard-header-info" $ do
+      H.img ! A.src "images/turtle.png" ! A.alt "turtle" ! A.width "150"
+      H.div $ do
+        H.h1 ! A.class_ "shiny" $ "Advent of Kokoa 2023!"
+        H.h2 "Leaderboard"
+        H.p $ do
+          H.p $ do
+            H.i ! A.class_ "fa-solid fa-tree" $ mempty
+            " Join our leaderboard with the code: "
+            H.span ! A.class_ "shiny" $ "1468863-c36b5be4 "
+            H.a ! A.href "/how-to-join" $ "How to join?"
+          H.p $ do
+            H.i ! A.class_ "fab fa-discord" $ mempty
+            " Join our Discord server where we'll talk about AoC:"
+            -- NOTE: This expires after 7 days.
+            H.a ! A.href "https://discord.gg/yuGedCTV" $ "https://discord.gg/yuGedCTV"
+          H.p $ do
+            H.i ! A.class_ "fa-solid fa-code" $ mempty
+            " Fork our GitHub repository to upload your solutions: "
+            H.a ! A.href "https://github.com/AoC-ESPOL/AoC-2023-Solutions" $ "https://github.com/AoC-ESPOL/AoC-2023-Solutions"
     H.img ! A.src "images/gecko.png" ! A.alt "gecko" ! A.width "150"
   case state of
     NoLeaderBoard -> H.p "Oops! We can't retrieve the leaderboard right now. Try again in 15 minutes!"
