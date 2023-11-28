@@ -124,18 +124,23 @@ viewBody state = do
         H.p $ do
           H.p $ do
             H.i ! A.class_ "fa-solid fa-tree" $ mempty
-            " Join our leaderboard with the code: "
+            " Únete a nuestro leaderboard con el código: "
             H.span ! A.class_ "shiny" $ "1468863-c36b5be4 "
-            H.a ! A.href "/how-to-join" $ "How to join?"
+            H.a ! A.href "/how-to-join" $ "¿Cómo me uno?"
           H.p $ do
             H.i ! A.class_ "fab fa-discord" $ mempty
-            " Join our Discord server where we'll talk about AoC:"
+            " Únete a nuestro servidor de Discord para hablar sobre el AoC:"
             -- NOTE: This expires after 7 days.
             H.a ! A.href "https://discord.gg/yuGedCTV" $ "https://discord.gg/yuGedCTV"
           H.p $ do
             H.i ! A.class_ "fa-solid fa-code" $ mempty
-            " Fork our GitHub repository to upload your solutions: "
+            " Comparte tus soluciones en nuestro repositorio en GitHub: "
             H.a ! A.href "https://github.com/AoC-ESPOL/AoC-2023-Solutions" $ "https://github.com/AoC-ESPOL/AoC-2023-Solutions"
+          H.p $ do
+            H.i ! A.class_ "fab fa-instagram" $ mempty
+            " Sigue al club Kokoa en Instagram "
+            H.a ! A.href "https://www.instagram.com/kokoa_espol/" $ "@kokoa_espol"
+            " para más"
     H.img ! A.src "images/gecko.png" ! A.alt "gecko" ! A.width "150"
   case state of
     NoLeaderBoard -> H.p "Oops! We can't retrieve the leaderboard right now. Try again in 15 minutes!"
@@ -153,20 +158,20 @@ view :: State -> Html
 view state = viewHead "LeaderBoard | Advent of Kokoa" >> H.body (viewBody state >> viewFooter)
 
 viewHowToJoin :: Html
-viewHowToJoin = viewHead "How to Join | Advent of Kokoa" >> H.body (do
-  H.h1 "How to join?"
+viewHowToJoin = viewHead "¿Cómo unirme? | Advent of Kokoa" >> H.body (do
+  H.h1 "¿Cómo unirme?"
   H.p $ do
-    "Visit the Advent of Code website and create an account if you don't have one: "
+    "Visita la página web del Advent of Code y crea una cuenta si no la tienes: "
     H.a ! A.href "https://adventofcode.com/2023" $ "https://adventofcode.com/2023. "
-    "Now click on \"Leaderboard\" in the top menu:"
+    "Haz clic en \"Leaderboard\" en la barra de opciones:"
   H.img ! A.src "images/01.png" ! A.alt "step 01"
-  H.p "Next, click on \"Private Leaderboard\":"
+  H.p "Ahora, haz clic en \"Private Leaderboard\":"
   H.img ! A.src "images/02.png" ! A.alt "step 02"
   H.p $ do
-    "Finally, enter the code in the input field: "
+    "Por último, ingresa el código en el campo de texto: "
     H.span ! A.class_ "shiny" $ "1468863-c36b5be4"
   H.img ! A.src "images/03.png" ! A.alt "step 03"
-  H.p "That's it! Happy hacking!"
+  H.p "¡Eso es todo! Happy hacking!"
   viewFooter)
 
 server :: Int -> TVar State -> IO ()
