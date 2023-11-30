@@ -130,8 +130,7 @@ viewBody state = do
           H.p $ do
             H.i ! A.class_ "fab fa-discord" $ mempty
             " Únete a nuestro servidor de Discord para hablar sobre el AoC:"
-            -- NOTE: This expires after 7 days.
-            H.a ! A.href "https://discord.gg/yuGedCTV" $ "https://discord.gg/yuGedCTV"
+            H.a ! A.href "https://discord.gg/9e2k52j6e9" $ "https://discord.gg/9e2k52j6e9"
           H.p $ do
             H.i ! A.class_ "fa-solid fa-code" $ mempty
             " Comparte tus soluciones en nuestro repositorio en GitHub: "
