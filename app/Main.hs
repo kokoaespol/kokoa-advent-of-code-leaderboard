@@ -101,7 +101,7 @@ viewHead title =
 
 viewLeaderBoard :: LeaderBoard -> Html
 viewLeaderBoard leaderBoard = do
-  H.ul $ forM_ (zip [1..] . sortBy (compare `on` local_score) . M.elems . members $ leaderBoard) $ \(n, member) -> do
+  H.ul $ forM_ (zip [1..] . sortBy (flip compare `on` local_score) . M.elems . members $ leaderBoard) $ \(n, member) -> do
     H.li $ do
       H.div ! A.class_ "user-item user-name" $ do
         H.span ! A.class_ "shiny" $ H.toHtml (n :: Integer)
