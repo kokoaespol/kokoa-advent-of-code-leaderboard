@@ -57,7 +57,8 @@ const ctx2 = document.getElementById('chart-p2');
         legend: {position: 'top'},
         title: {display: true, text: title},
         tooltip: true
-      }
+      },
+      scales: {y: {display: true, type: 'logarithmic'}}
     }
   });
 
