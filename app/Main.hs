@@ -9,6 +9,8 @@ import           Control.Monad                        (forM_, forever, void)
 import           Control.Monad.IO.Class               (liftIO)
 import           Data.Function                        (on)
 import           Data.List                            (sortBy)
+import           Data.Map                             (Map)
+import qualified Data.Map                             as Map
 import           GHC.Generics                         (Generic)
 import           System.Environment                   (lookupEnv)
 
@@ -22,8 +24,6 @@ import           Data.ByteString                      (ByteString)
 import qualified Data.ByteString.Char8                as B8
 import           Data.FileEmbed                       (embedFile,
                                                        makeRelativeToProject)
-import           Data.Map                             (Map)
-import qualified Data.Map                             as M
 import           Data.Text                            (Text)
 import qualified Data.Text.Encoding                   as TE
 import           Network.HTTP.Req
@@ -36,19 +36,28 @@ import           Text.Blaze.Html5                     ((!))
 import qualified Text.Blaze.Html5.Attributes          as A
 import           Web.Scotty                           hiding (header)
 
+data StarData = StarData
+  { get_star_ts :: !Int
+  , star_index  :: !Int
+  }
+  deriving (Show, Generic, FromJSON, ToJSON)
+
+type Day = Map Int StarData
+
 data Member = Member
-  { id           :: Int
-  , global_score :: Int
-  , name         :: Text
-  , local_score  :: Int
-  , stars        :: Int
+  { id                   :: !Int
+  , global_score         :: !Int
+  , name                 :: !Text
+  , local_score          :: !Int
+  , stars                :: !Int
+  , completion_day_level :: !(Map Int Day)
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
 data LeaderBoard = LeaderBoard
-  { owner_id :: Int
-  , members  :: Map Text Member
-  , event    :: Text
+  { owner_id :: !Int
+  , members  :: !(Map Text Member)
+  , event    :: !Text
   }
   deriving (Show, Generic, FromJSON)
 
@@ -101,7 +110,7 @@ viewHead title =
 
 viewLeaderBoard :: LeaderBoard -> Html
 viewLeaderBoard leaderBoard = do
-  H.ul $ forM_ (zip [1..] . sortBy (flip compare `on` local_score) . M.elems . members $ leaderBoard) $ \(n, member) -> do
+  H.ul $ forM_ (zip [1..] . sortBy (flip compare `on` local_score) . Map.elems . members $ leaderBoard) $ \(n, member) -> do
     H.li $ do
       H.div ! A.class_ "user-item user-name" $ do
         H.span ! A.class_ "shiny" $ H.toHtml (n :: Integer)
@@ -121,6 +130,8 @@ viewBody state = do
       H.div $ do
         H.h1 ! A.class_ "shiny" $ "Advent of Kokoa 2023!"
         H.h2 "Leaderboard"
+        H.p ! A.class_ "shiny" $
+          H.a ! A.href "/progress" $ "Ver progreso"
         H.p $ do
           H.p $ do
             H.i ! A.class_ "fa-solid fa-tree" $ mempty
@@ -173,14 +184,33 @@ viewHowToJoin = viewHead "¿Cómo unirme? | Advent of Kokoa" >> H.body (do
   H.p "¡Eso es todo! Happy hacking!"
   viewFooter)
 
+viewChart :: Html
+viewChart = viewHead "Progreso | Advent of Kokoa" >> H.body (do
+  H.h1 ! A.class_ "shiny" $ "Progreso"
+  H.canvas ! A.id "chart-p1" $ mempty
+  H.canvas ! A.id "chart-p2" $ mempty
+  H.script ! A.src "https://cdn.jsdelivr.net/npm/chart.js" $ mempty
+  H.script ! A.src "/chart.js" $ mempty
+  viewFooter)
+
 server :: Int -> TVar State -> IO ()
 server port stateRef = scotty port $ do
   middleware static
   middleware logStdout
+
   get "/" $ do
     state <- liftIO $ readTVarIO stateRef
     html $ renderHtml $ view state
+
   get "/how-to-join" . html . renderHtml $ viewHowToJoin
+
+  get "/progress" . html . renderHtml $ viewChart
+
+  get "/members" $ do
+    state <- liftIO $ readTVarIO stateRef
+    case state of
+      NoLeaderBoard               -> json ([] :: [()])
+      WithLeaderBoard leaderBoard -> json . Map.elems . members $ leaderBoard
 
 main :: IO ()
 main = do
