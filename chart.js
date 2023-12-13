@@ -33,13 +33,13 @@ const ctx2 = document.getElementById('chart-p2');
 
     for (const [day, stars] of Object.entries(completion_day_level)) {
       const dayNumber = parseInt(day);
-      const dayDate = new Date(2023, 11, dayNumber).getTime();
+      const dayDate = new Date(2023, 11, dayNumber).getTime() / 1000 / 60;
 
       const partOneDate = parseInt(stars['1']?.get_star_ts) / 60;
       const partTwoDate = parseInt(stars['2']?.get_star_ts) / 60;
 
-      partOne[dayNumber - 1] = partOneDate - (dayDate / 1000 / 60);
-      partTwo[dayNumber - 1] = partTwoDate - (dayDate / 1000 / 60);
+      partOne[dayNumber - 1] = partOneDate - dayDate;
+      partTwo[dayNumber - 1] = partTwoDate - partOneDate;
     }
 
     datasetsPartOne.push({label: name, data: partOne, ...datasetConfig});
