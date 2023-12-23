@@ -34,7 +34,7 @@ import           Text.Blaze.Html.Renderer.Text        (renderHtml)
 import qualified Text.Blaze.Html5                     as H
 import           Text.Blaze.Html5                     ((!))
 import qualified Text.Blaze.Html5.Attributes          as A
-import           Web.Scotty                           hiding (header)
+import           Web.Scotty                           hiding (catch, header)
 
 data StarData = StarData
   { get_star_ts :: !Int
