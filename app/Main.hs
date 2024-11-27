@@ -6,7 +6,6 @@ module Main where
 
 import           Control.Exception
 import           Control.Monad                        (forM_, forever, void)
-import           Control.Monad.IO.Class               (liftIO)
 import           Data.Function                        (on)
 import           Data.List                            (sortBy)
 import           Data.Map                             (Map)
@@ -77,7 +76,7 @@ getLeaderBoard :: ByteString -> IO (Maybe LeaderBoard)
 getLeaderBoard cookie = (Just <$> runReq defaultHttpConfig (do
   r <- req
         GET
-        (https "adventofcode.com" /: "2023" /: "leaderboard" /: "private" /: "view" /: "1468863.json")
+        (https "adventofcode.com" /: "2024" /: "leaderboard" /: "private" /: "view" /: "1468863.json")
         NoReqBody
         jsonResponse
         (header "Cookie" cookie)
@@ -99,7 +98,7 @@ leaderBoardCss = $(makeRelativeToProject "styles.css" >>= embedFile)
 viewHead :: String -> Html
 viewHead title =
   H.head $ do
-    H.link ! A.rel "stylesheet" ! A.href "/styles.css"
+    H.link ! A.rel "stylesheet" ! A.href "/adventofcode/styles.css"
     H.link ! A.rel "stylesheet" ! A.href "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css"
     H.link ! A.rel "stylesheet" ! A.href "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/regular.min.css"
     H.link ! A.rel "stylesheet" ! A.href "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css"
@@ -128,24 +127,15 @@ viewBody state = do
     H.div ! A.id "leaderboard-header-info" $ do
       H.img ! A.src "images/turtle.png" ! A.alt "turtle" ! A.width "150"
       H.div $ do
-        H.h1 ! A.class_ "shiny" $ "Advent of Kokoa 2023!"
-        H.h2 "Leaderboard"
+        H.h1 ! A.class_ "shiny" $ "Advent of Kokoa 2024"
         H.p ! A.class_ "shiny" $
-          H.a ! A.href "/progress" $ "Ver progreso"
+          H.a ! A.href "/adventofcode/progress" $ "Ver progreso"
         H.p $ do
           H.p $ do
             H.i ! A.class_ "fa-solid fa-tree" $ mempty
             " Únete a nuestro leaderboard con el código: "
             H.span ! A.class_ "shiny" $ "1468863-c36b5be4 "
             H.a ! A.href "/how-to-join" $ "¿Cómo me uno?"
-          H.p $ do
-            H.i ! A.class_ "fab fa-discord" $ mempty
-            " Únete a nuestro servidor de Discord para hablar sobre el AoC:"
-            H.a ! A.href "https://discord.gg/9e2k52j6e9" $ "https://discord.gg/9e2k52j6e9"
-          H.p $ do
-            H.i ! A.class_ "fa-solid fa-code" $ mempty
-            " Comparte tus soluciones en nuestro repositorio en GitHub: "
-            H.a ! A.href "https://github.com/AoC-ESPOL/AoC-2023-Solutions" $ "https://github.com/AoC-ESPOL/AoC-2023-Solutions"
           H.p $ do
             H.i ! A.class_ "fab fa-instagram" $ mempty
             " Sigue al club Kokoa en Instagram "
@@ -156,23 +146,15 @@ viewBody state = do
     NoLeaderBoard -> H.p "Oops! We can't retrieve the leaderboard right now. Try again in 15 minutes!"
     WithLeaderBoard leaderBoard -> viewLeaderBoard leaderBoard
 
-viewFooter :: Html
-viewFooter = H.footer $ do
-  H.p $ do
-    "Fork me on "
-    H.a ! A.href "https://github.com/kokoaespol/aoc-leaderboard" $
-      H.i ! A.class_ "fab fa-github" $ mempty
-  H.p "Copyright Club Kokoa 2023"
-
 view :: State -> Html
-view state = viewHead "LeaderBoard | Advent of Kokoa" >> H.body (viewBody state >> viewFooter)
+view state = viewHead "LeaderBoard | Advent of Kokoa" >> H.body (viewBody state)
 
 viewHowToJoin :: Html
 viewHowToJoin = viewHead "¿Cómo unirme? | Advent of Kokoa" >> H.body (do
   H.h1 "¿Cómo unirme?"
   H.p $ do
     "Visita la página web del Advent of Code y crea una cuenta si no la tienes: "
-    H.a ! A.href "https://adventofcode.com/2023" $ "https://adventofcode.com/2023. "
+    H.a ! A.href "https://adventofcode.com/2024" $ "https://adventofcode.com/2024. "
     "Haz clic en \"Leaderboard\" en la barra de opciones:"
   H.img ! A.src "images/01.png" ! A.alt "step 01"
   H.p "Ahora, haz clic en \"Private Leaderboard\":"
@@ -181,8 +163,7 @@ viewHowToJoin = viewHead "¿Cómo unirme? | Advent of Kokoa" >> H.body (do
     "Por último, ingresa el código en el campo de texto: "
     H.span ! A.class_ "shiny" $ "1468863-c36b5be4"
   H.img ! A.src "images/03.png" ! A.alt "step 03"
-  H.p "¡Eso es todo! Happy hacking!"
-  viewFooter)
+  H.p "¡Eso es todo! Happy hacking!")
 
 viewChart :: Html
 viewChart = viewHead "Progreso | Advent of Kokoa" >> H.body (do
@@ -190,27 +171,37 @@ viewChart = viewHead "Progreso | Advent of Kokoa" >> H.body (do
   H.canvas ! A.id "chart-p1" $ mempty
   H.canvas ! A.id "chart-p2" $ mempty
   H.script ! A.src "https://cdn.jsdelivr.net/npm/chart.js" $ mempty
-  H.script ! A.src "/chart.js" $ mempty
-  viewFooter)
+  H.script ! A.src "/chart.js" $ mempty)
+
+renderRoot :: TVar State -> ActionM ()
+renderRoot stateRef = do
+  state <- liftIO $ readTVarIO stateRef
+  html $ renderHtml $ view state
+
+getMembers :: TVar State -> ActionM ()
+getMembers stateRef = do
+  state <- liftIO $ readTVarIO stateRef
+  case state of
+    NoLeaderBoard               -> json ([] :: [()])
+    WithLeaderBoard leaderBoard -> json . Map.elems . members $ leaderBoard
 
 server :: Int -> TVar State -> IO ()
 server port stateRef = scotty port $ do
   middleware static
   middleware logStdout
 
-  get "/" $ do
-    state <- liftIO $ readTVarIO stateRef
-    html $ renderHtml $ view state
+  get "/" $ renderRoot stateRef
+  get "/adventofcode" $ renderRoot stateRef
 
   get "/how-to-join" . html . renderHtml $ viewHowToJoin
+  get "/adventofcode/how-to-join" . html . renderHtml $ viewHowToJoin
 
   get "/progress" . html . renderHtml $ viewChart
+  get "/adventofcode/progress" . html . renderHtml $ viewChart
 
-  get "/members" $ do
-    state <- liftIO $ readTVarIO stateRef
-    case state of
-      NoLeaderBoard               -> json ([] :: [()])
-      WithLeaderBoard leaderBoard -> json . Map.elems . members $ leaderBoard
+  get "/members" $ getMembers stateRef
+  get "/adventofcode/members" $ getMembers stateRef
+
 
 main :: IO ()
 main = do
